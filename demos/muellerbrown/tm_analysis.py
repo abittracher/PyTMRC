@@ -50,14 +50,14 @@ def visualizePotential():
     ax.pcolormesh( xpot[:,0].reshape(nPotpoints, -1), xpot[:,1].reshape(nPotpoints, -1), V.reshape(nPotpoints,-1), cmap='viridis', vmax=10, shading='gouraud')
 
     plt.rc('text', usetex=True)
-    font = {'family' : 'serif', 
+    font = {'family' : 'serif',
             'size'   : 16}
     plt.rc('font', **font)
     fig.set_size_inches(4,4)
     ax.set_title(r'Mueller-Brown potential')
     ax.set_xlabel(r'$x_1$')
     ax.set_ylabel(r'$x_2$')
-    
+
     fig.show()
 
 
@@ -72,39 +72,39 @@ def visualizePotential():
 def computeKernelRC():
     # choose the embedding kernel
     kernel = krnls.GaussianKernel(1)
-    
+
     # computation of the reaction corodinate
     kerTM = tm.KernelBurstTransitionManifold(system, kernel, xtest, 0.03, 0.00001, 100, 1)
     kerTM.computeRC()
     return kerTM
 
 
-# Visualize the reaction coordinate    
+# Visualize the reaction coordinate
 def visualizeKernelRC(kerTM):
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    
+
     # visualize RC
     pcol = ax.pcolormesh( xtest[:,0].reshape(nTestpoints, -1),
                  xtest[:,1].reshape(nTestpoints, -1),
-                 np.real(kerTM.rc[1][:,1].reshape(nTestpoints,-1)), 
+                 np.real(kerTM.rc[1][:,1].reshape(nTestpoints,-1)),
                  shading='flat',
                  )
     clb = fig.colorbar(pcol)
     clb.ax.set_title(r'$\xi$')
-    
+
     plt.rc('text', usetex=True)
-    font = {'family' : 'serif', 
+    font = {'family' : 'serif',
             'size'   : 16}
     plt.rc('font', **font)
     fig.set_size_inches(4,4)
     ax.set_title(r'kernel RC')
     ax.set_xlabel(r'$x_1$')
     ax.set_ylabel(r'$x_2$')
-    
+
     fig.show()
-    
-    
+
+
 ##################################################
 #
 #    Whitney Embedding Transition Manifold method
@@ -119,20 +119,20 @@ def computeEmbeddingRC():
     embTM.computeRC()
     return embTM
 
-    
+
 def visualizeEmbeddingRC(embTM):
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    
+
     # visualize RC
     ax.pcolormesh( xtest[:,0].reshape(nTestpoints, -1),
-                 xtest[:,1].reshape(nTestpoints, -1), 
-                 np.real(embTM.rc[1][:,1].reshape(nTestpoints,-1)), 
+                 xtest[:,1].reshape(nTestpoints, -1),
+                 np.real(embTM.rc[1][:,1].reshape(nTestpoints,-1)),
                  shading='flat',
                  )
-    
+
     plt.rc('text', usetex=True)
-    font = {'family' : 'serif', 
+    font = {'family' : 'serif',
             'size'   : 16}
     plt.rc('font', **font)
     fig.set_size_inches(4,4)
@@ -140,22 +140,22 @@ def visualizeEmbeddingRC(embTM):
     ax.set_xlabel(r'$x_1$')
     ax.set_ylabel(r'$x_2$')
 
-    fig.show()    
+    fig.show()
 
 
 
 def main():
-    
+
     visualizePotential()
-    
+
     print("Computing Reaction coordinate using the Kernel Transition Manifold method")
     kerTM=computeKernelRC()
     visualizeKernelRC(kerTM)
-#    
+
     print("Computing Reaction coordinate using the Whitney Embedding Transition Manifold method")
     embTM=computeEmbeddingRC()
     visualizeEmbeddingRC(embTM)
-    
-    
+
+
 if __name__== "__main__":
     main()
