@@ -6,7 +6,7 @@ import math
 import numpy as np
 
 # utility imports
-from tqdm import tqdm, tqdm_gui
+from tqdm import tqdm
 
 
 class GradientSystem(object):
@@ -84,12 +84,6 @@ class GradientSystem(object):
 
         """
 
-        if showprogress:
-            ProgressBar = progressbar.ProgressBar
-        else:
-            ProgressBar = progressbar.NullBar
-        bar = ProgressBar()
-
         nsteps = math.floor(t/dt)
         # only first entry of r0 is used as starting point. all other entries are ignored
         rnew = np.array([r0[0, :]])
@@ -101,7 +95,7 @@ class GradientSystem(object):
         mean = np.zeros(sysdim)
         var = (dt*2/self.beta)*np.eye(sysdim)
 
-        for i in bar(range(nsteps)):
+        for i in tqdm(range(nsteps), disable=not showprogress):
             nablaV = self.gradPot(rnew)
 
             # generate Brownian motion

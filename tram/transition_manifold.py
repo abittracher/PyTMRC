@@ -12,7 +12,7 @@ from sklearn.neighbors.kde import KernelDensity
 from scipy.integrate import dblquad
 
 # utility imports
-from tqdm import tqdm, tqdm_gui
+from tqdm import tqdm
 
 # TM imports
 import tram.manifold_learning as ml

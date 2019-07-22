@@ -4,10 +4,14 @@
 Different kernels used for RKHS-embedding and Diffusion Maps algorithm
 """
 
+# numerics imports
 import numpy as np
 import scipy.linalg as la
 import scipy.sparse.linalg as sla
-import progressbar
+
+# utility imports
+from tqdm import tqdm
+
 from scipy.spatial.distance import cdist
 
 class Kernel:
@@ -17,7 +21,7 @@ class Kernel:
         eigs = sla.eigs(GxxTest,neigs)
         return eigs
     
-    def computeMercerProjection(self, r, xtest, neigs, eigs=None):
+    def computeMercerProjection(self, r, xtest, neigs, eigs=None, showprogress=True):
         GxxTest = self.evaluate(xtest,xtest) # Gram matrix in the eigenvector test points
         GxxBurst = self.evaluate(r,xtest) # Gram matrix in the trajectory end points
         pGxxTest = la.pinv(GxxTest)
@@ -28,7 +32,7 @@ class Kernel:
             
         h = []
         # inner product between the density implied by the point cloud and the i-th eigenfunction
-        for i in progressbar.progressbar(range(neigs)):
+        for i in tqdm(range(neigs), disable = not showprogress):
             y = (GxxBurst.dot(pGxxTest)).dot(eigs[1][:,i])
             h = np.append(h, np.sum(y)) # the sum is MonteCarlo quadrature
         #return h
