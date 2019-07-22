@@ -4,7 +4,9 @@
 # numerics imports
 import math
 import numpy as np
-import progressbar
+
+# utility imports
+from tqdm import tqdm, tqdm_gui
 
 
 class GradientSystem(object):
@@ -132,13 +134,8 @@ class GradientSystem(object):
             array containing the end points of the trajectories
 
         """
-
-        if showprogress:
-            ProgressBar = progressbar.ProgressBar
-        else:
-            ProgressBar = progressbar.NullBar
-        bar = ProgressBar()
-
+        
+    
         nsteps = math.floor(t/dt)
         npoints = np.size(r0, 0)
         sysdim = np.size(r0, 1)
@@ -151,7 +148,7 @@ class GradientSystem(object):
         #dW = np.random.multivariate_normal(mean, var, nsteps*npoints).reshape((npoints,sysdim,-1))
 
         print("Burst integration...")
-        for i in bar(range(nsteps)):
+        for i in tqdm(range(nsteps), disable = not showprogress):
             nablaV = self.gradPot(r0)
 
             # draw Brownian motion

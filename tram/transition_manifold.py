@@ -6,11 +6,13 @@ Transition Manifold-related classes and methods
 
 # numerics imports
 import numpy as np
-from progressbar import progressbar
 from scipy.spatial import cKDTree
 from scipy.ndimage.interpolation import shift
 from sklearn.neighbors.kde import KernelDensity
 from scipy.integrate import dblquad
+
+# utility imports
+from tqdm import tqdm, tqdm_gui
 
 # TM imports
 import tram.manifold_learning as ml
@@ -37,24 +39,24 @@ class KernelBurstTransitionManifold(TransitionManifold):
         self.M = M
         self.epsi = epsi
 
-    def computeRC(self):
+    def computeRC(self, showprogress = True):
         npoints = np.size(self.xtest,0)
 
         # compute the time evolution of all test points at once, for performance reasons
         x0 = np.tile(self.xtest, (self.M,1))
-        pointclouds = self.system.computeBurst(self.t, self.dt, x0, showprogress=True)
+        pointclouds = self.system.computeBurst(self.t, self.dt, x0, showprogress=showprogress)
 
         # compute symmetric kernel evaluations
         dXX = []
         print("Computing symmetric kernel evaluations...")
-        for i in progressbar(range(npoints)):
+        for i in tqdm(range(npoints), disable = not showprogress):
             GXX = self.kernel.evaluate(pointclouds[i::npoints,:], pointclouds[i::npoints,:])
             dXX = np.append(dXX, np.sum(GXX))
 
         # compute asymmetric kernel evaluations and assemble distance matrix
         distMat = np.zeros((npoints, npoints))
         print("Computing asymmetric kernel evaluations...")
-        for i in progressbar(range(npoints)):
+        for i in tqdm(range(npoints), disable = not showprogress):
             for j in range(i):
                 GXY = self.kernel.evaluate(pointclouds[i::npoints,:], pointclouds[j::npoints,:])
                 distMat[i,j] = (dXX[i] + dXX[j] - 2*np.sum(GXY)) / self.M**2
@@ -79,10 +81,11 @@ class KernelTrajTransitionManifold(TransitionManifold):
         self.lag = lag
         self.epsi = epsi
 
-    def computeRC(self):
+    def computeRC(self, showprogress = True):
         npoints = np.size(self.xtest,0)
 
         # indices of test points closest to trajectory points
+        print("Sorting into Voronoi cells...")
         kdTree = cKDTree(self.xtest)
         closest = kdTree.query(self.traj, n_jobs=-1)[1]
 
@@ -96,14 +99,14 @@ class KernelTrajTransitionManifold(TransitionManifold):
         # compute symmetric kernel evaluations
         dXX = []
         print("Computing symmetric kernel evaluations...")
-        for i in progressbar(range(npoints)):
+        for i in tqdm(range(npoints), disable = not showprogress):
             GXX = self.kernel.evaluate(pointclouds[i], pointclouds[i])
             dXX = np.append(dXX, np.sum(GXX))
 
         # compute asymmetric kernel evaluations and assemble distance matrix
         distMat = np.zeros((npoints, npoints))
         print("Computing asymmetric kernel evaluations...")
-        for i in progressbar(range(npoints)):
+        for i in tqdm(range(npoints), disable = not showprogress):
             nTrajpointsi = np.size(pointclouds[i],0)
             for j in range(i):
                 nTrajpointsj = np.size(pointclouds[j],0)
@@ -129,16 +132,17 @@ class EmbeddingBurstTransitionManifold(TransitionManifold):
         self.M = M
         self.epsi = epsi
 
-    def computeRC(self):
+    def computeRC(self, showprogress=True):
         npoints = np.size(self.xtest,0)
 
         # compute the time evolution of all test points at once, for performance reasons
         x0 = np.tile(self.xtest, (self.M,1))
-        pointclouds = self.system.computeBurst(self.t, self.dt, x0, showprogress=True)
+        pointclouds = self.system.computeBurst(self.t, self.dt, x0, showprogress=showprogress)
 
         # embedd each point cloud into R^k
         embpointclouds = np.zeros((0,(self.embfun).outputdimension))
-        for i in range(npoints):
+        print("Evaluating observables...")
+        for i in tqdm(range(npoints), disable = not showprogress):
             y = self.embfun.evaluate(pointclouds[i::npoints,:])
             embpointclouds = np.append(embpointclouds, [np.sum(y,0)/self.M], axis=0)
         self.embpointclouds = embpointclouds
@@ -197,7 +201,7 @@ class L2BurstTransitionManifold(TransitionManifold):
         dist = dblquad(integrand, self.system.domain[0,0], self.system.domain[1,0], self.system.domain[0,1], self.system.domain[1,1])
         return dist
 
-    def computeRC(self):
+    def computeRC(self, showprogress=True):
         npoints = np.size(self.xtest,0)
 
         # compute the time evolution of all test points at once, for performance reasons
@@ -207,7 +211,7 @@ class L2BurstTransitionManifold(TransitionManifold):
         # compute distance matrix
         distMat = np.zeros((npoints, npoints))
         print("Computing distance matrix...")
-        for i in progressbar(range(npoints)):
+        for i in tqdm(range(npoints), disable = not showprogress):
             for j in range(npoints):
                 distMat[i,j] = self.L2distance(pointclouds[i::npoints,:], pointclouds[j::npoints,:])[0]
         self.distMat = distMat
