@@ -7,9 +7,12 @@ Transition Manifold-related classes and methods
 # numerics imports
 import numpy as np
 from scipy.spatial import cKDTree
+from scipy.sparse.linalg import eigsh
 from scipy.ndimage.interpolation import shift
 from sklearn.neighbors.kde import KernelDensity
 from scipy.integrate import dblquad
+from sklearn.kernel_approximation import RBFSampler
+
 
 # utility imports
 from tqdm import tqdm
@@ -220,3 +223,58 @@ class L2BurstTransitionManifold(TransitionManifold):
         #eigs = ml.diffusionMaps(embpointclouds, epsi=self.epsi)
         #self.rc= eigs
 
+
+class LinearRFFManifold(TransitionManifold):
+
+    def __init__(self, system, xtest, t, dt, M, epsi=1., rffdim=100):
+        self.system = system
+        self.xtest = xtest
+        self.t = t
+        self.dt = dt
+        self.M = M
+        self.epsi = epsi 
+        self.rffdim = rffdim
+
+        self.sampler = None
+        self.embedded = None
+        self.vec = None
+
+    def computeRC(self):
+        
+        n_points = self.xtest.shape[0] # number of start points
+
+        # compute the time evolution of all test points at once, for performance reasons
+        x0 = np.repeat(self.xtest, self.M, axis=0)
+        
+        #pointclouds is of shape (self.M * n_points ) x dimension
+        pointclouds = self.system.computeBurst(self.t, self.dt, x0, showprogress=True)
+        #transform endpoints to Fourier domain        
+        sampler = RBFSampler(gamma = self.epsi, n_components=self.rffdim)
+        sampler.fit(pointclouds)
+        self.sampler = sampler
+        pointclouds = sampler.transform(pointclouds)
+                
+        #compute RFF mean embeddings
+        embedded = pointclouds.reshape(n_points, self.M, self.rffdim).sum(axis=1) / self.M
+        
+        #centering
+        mean = embedded.sum(axis=0) / n_points
+        self.embedded = embedded - mean
+
+        #covariance matrix
+        cov = self.embedded.T @ self.embedded # rff dim x rff dim
+        
+        print("Compute linear RFF RC")
+        _, self.vec = eigsh(cov, k=1, which="LM")
+
+    def evaluate(self, data):
+        """
+        Evaluates the computed eigenfunction on given data.
+        Note: computeRC has to be run first. 
+        """
+
+        if self.sampler is None:
+            raise RuntimeError("Run computeRC first to fit the model.")
+
+        test_embedded = self.sampler.transform(data)
+        return test_embedded @ self.vec
