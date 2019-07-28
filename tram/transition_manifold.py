@@ -226,18 +226,20 @@ class L2BurstTransitionManifold(TransitionManifold):
 
 class LinearRFFManifold(TransitionManifold):
 
-    def __init__(self, system, xtest, t, dt, M, sampler = "rff", n_components=100, 
+    def __init__(self, system, xtest, t, dt, M, method="rff", n_components=100, 
                  kernel="rbf", epsi=.1, **kwargs):
         self.system = system
         self.xtest = xtest
         self.t = t
         self.dt = dt
         self.M = M
+        self.method = method
         self.epsi = epsi
         self.kernel = kernel 
         self.n_components = n_components
+        self.kwargs = kwargs
 
-        self.sampler = sampler
+        self.sampler = None
         self.embedded = None
         self.vec = None
 
@@ -252,16 +254,18 @@ class LinearRFFManifold(TransitionManifold):
         pointclouds = self.system.computeBurst(self.t, self.dt, x0, showprogress=True)
         
         #transform endpoints to feature approximation space    
-        if self.sampler == "rff":
-            sampler = RBFSampler(gamma = self.epsi, n_components=self.n_components)
-        elif self.sampler == "nystroem":
-            sampler = Nystroem(kernel=self.kernel, n_components=self.n_components)
+        if self.method == "rff":
+            self.sampler = RBFSampler(gamma = self.epsi, n_components=self.n_components,
+                                      **self.kwargs)
+        elif self.method == "nystroem":
+            self.sampler = Nystroem(kernel=self.kernel, n_components=self.n_components,
+                                    **self.kwargs)
         else:
-            raise ValueError("Instantiate with either sampler='rff' or sampler='nystroem'")
+            raise ValueError("Instantiate with either method='rff' or sampler='nystroem'")
+
             
-        sampler.fit(pointclouds)
-        self.sampler = sampler
-        pointclouds = sampler.transform(pointclouds)
+        self.sampler.fit(pointclouds)
+        pointclouds = self.sampler.transform(pointclouds)
                 
         #compute approximation space mean embeddings
         embedded = pointclouds.reshape(n_points, self.M, self.n_components).sum(axis=1) / self.M
@@ -272,8 +276,6 @@ class LinearRFFManifold(TransitionManifold):
 
         #covariance matrix
         cov = self.embedded.T @ self.embedded # n_components x n_components
-        
-        print("Compute linear RFF RC")
         _, self.vec = eigsh(cov, k=1, which="LM")
 
     def evaluate(self, data):
