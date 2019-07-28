@@ -11,7 +11,7 @@ from scipy.sparse.linalg import eigsh
 from scipy.ndimage.interpolation import shift
 from sklearn.neighbors.kde import KernelDensity
 from scipy.integrate import dblquad
-from sklearn.kernel_approximation import RBFSampler
+from sklearn.kernel_approximation import RBFSampler, Nystroem
 
 
 # utility imports
@@ -226,16 +226,18 @@ class L2BurstTransitionManifold(TransitionManifold):
 
 class LinearRFFManifold(TransitionManifold):
 
-    def __init__(self, system, xtest, t, dt, M, epsi=1., rffdim=100):
+    def __init__(self, system, xtest, t, dt, M, sampler = "rff", n_components=100, 
+                 kernel="rbf", epsi=.1, **kwargs):
         self.system = system
         self.xtest = xtest
         self.t = t
         self.dt = dt
         self.M = M
-        self.epsi = epsi 
-        self.rffdim = rffdim
+        self.epsi = epsi
+        self.kernel = kernel 
+        self.n_components = n_components
 
-        self.sampler = None
+        self.sampler = sampler
         self.embedded = None
         self.vec = None
 
@@ -248,21 +250,28 @@ class LinearRFFManifold(TransitionManifold):
         
         #pointclouds is of shape (self.M * n_points ) x dimension
         pointclouds = self.system.computeBurst(self.t, self.dt, x0, showprogress=True)
-        #transform endpoints to Fourier domain        
-        sampler = RBFSampler(gamma = self.epsi, n_components=self.rffdim)
+        
+        #transform endpoints to feature approximation space    
+        if self.sampler == "rff":
+            sampler = RBFSampler(gamma = self.epsi, n_components=self.n_components)
+        elif self.sampler == "nystroem":
+            sampler = Nystroem(kernel=self.kernel, n_components=self.n_components)
+        else:
+            raise ValueError("Instantiate with either sampler='rff' or sampler='nystroem'")
+            
         sampler.fit(pointclouds)
         self.sampler = sampler
         pointclouds = sampler.transform(pointclouds)
                 
-        #compute RFF mean embeddings
-        embedded = pointclouds.reshape(n_points, self.M, self.rffdim).sum(axis=1) / self.M
+        #compute approximation space mean embeddings
+        embedded = pointclouds.reshape(n_points, self.M, self.n_components).sum(axis=1) / self.M
         
         #centering
         mean = embedded.sum(axis=0) / n_points
         self.embedded = embedded - mean
 
         #covariance matrix
-        cov = self.embedded.T @ self.embedded # rff dim x rff dim
+        cov = self.embedded.T @ self.embedded # n_components x n_components
         
         print("Compute linear RFF RC")
         _, self.vec = eigsh(cov, k=1, which="LM")
