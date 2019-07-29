@@ -7,9 +7,12 @@ Transition Manifold-related classes and methods
 # numerics imports
 import numpy as np
 from scipy.spatial import cKDTree
+from scipy.sparse.linalg import eigsh
 from scipy.ndimage.interpolation import shift
 from sklearn.neighbors.kde import KernelDensity
 from scipy.integrate import dblquad
+from sklearn.kernel_approximation import RBFSampler, Nystroem
+
 
 # utility imports
 from tqdm import tqdm
@@ -220,3 +223,69 @@ class L2BurstTransitionManifold(TransitionManifold):
         #eigs = ml.diffusionMaps(embpointclouds, epsi=self.epsi)
         #self.rc= eigs
 
+
+class LinearRFFManifold(TransitionManifold):
+
+    def __init__(self, system, xtest, t, dt, M, method="rff", n_components=100, 
+                 kernel="rbf", epsi=.1, **kwargs):
+        self.system = system
+        self.xtest = xtest
+        self.t = t
+        self.dt = dt
+        self.M = M
+        self.method = method
+        self.epsi = epsi
+        self.kernel = kernel 
+        self.n_components = n_components
+        self.kwargs = kwargs
+
+        self.sampler = None
+        self.embedded = None
+        self.vec = None
+
+    def computeRC(self):
+        
+        n_points = self.xtest.shape[0] # number of start points
+
+        # compute the time evolution of all test points at once, for performance reasons
+        x0 = np.repeat(self.xtest, self.M, axis=0)
+        
+        #pointclouds is of shape (self.M * n_points ) x dimension
+        pointclouds = self.system.computeBurst(self.t, self.dt, x0, showprogress=True)
+        
+        #transform endpoints to feature approximation space    
+        if self.method == "rff":
+            self.sampler = RBFSampler(gamma = self.epsi, n_components=self.n_components,
+                                      **self.kwargs)
+        elif self.method == "nystroem":
+            self.sampler = Nystroem(kernel=self.kernel, n_components=self.n_components,
+                                    **self.kwargs)
+        else:
+            raise ValueError("Instantiate with either method='rff' or sampler='nystroem'")
+
+            
+        self.sampler.fit(pointclouds)
+        pointclouds = self.sampler.transform(pointclouds)
+                
+        #compute approximation space mean embeddings
+        embedded = pointclouds.reshape(n_points, self.M, self.n_components).sum(axis=1) / self.M
+        
+        #centering
+        mean = embedded.sum(axis=0) / n_points
+        self.embedded = embedded - mean
+
+        #covariance matrix
+        cov = self.embedded.T @ self.embedded # n_components x n_components
+        _, self.vec = eigsh(cov, k=1, which="LM")
+
+    def evaluate(self, data):
+        """
+        Evaluates the computed eigenfunction on given data.
+        Note: computeRC has to be run first. 
+        """
+
+        if self.sampler is None:
+            raise RuntimeError("Run computeRC first to fit the model.")
+
+        test_embedded = self.sampler.transform(data)
+        return test_embedded @ self.vec
