@@ -224,18 +224,31 @@ class L2BurstTransitionManifold(TransitionManifold):
         #self.rc= eigs
 
 
-class LinearRFFManifold(TransitionManifold):
+class LinearRandomFeatureManifold(TransitionManifold):
+    """
+    A class providing a linear transition manifold
+    by using kernel feature Approximations. The kernel embeddings
+    of the transition densities are approximated with
+    either random Fourier features or the Nystroem method.
 
-    def __init__(self, system, xtest, t, dt, M, method="rff", n_components=100, 
-                 kernel="rbf", epsi=.1, **kwargs):
-        self.system = system
-        self.xtest = xtest
-        self.t = t
-        self.dt = dt
-        self.M = M
+    Please refer also to the documentation of sklearn.kernel_approximation
+    """
+
+    def __init__(self, method="rff", n_components=100, kernel="rbf", gamma=.1, **kwargs):
+        """
+        TODO document interface
+        TODO add output dimension choice to PCA routine
+
+        Parameters
+        ----------
+        method : str
+            specifies the used feature approximation. Can either be 'rff' or 'nystroem'
+        n_components : int
+            number of dimensions in the feature approximation space.
+        """
         self.method = method
-        self.epsi = epsi
-        self.kernel = kernel 
+        self.gamma = gamma
+        self.kernel = kernel
         self.n_components = n_components
         self.kwargs = kwargs
 
@@ -243,19 +256,26 @@ class LinearRFFManifold(TransitionManifold):
         self.embedded = None
         self.vec = None
 
-    def computeRC(self):
-        
-        n_points = self.xtest.shape[0] # number of start points
+    def fit(self, X):
+        """
+        Computes a linear reaction coordinate based on the data X.
 
-        # compute the time evolution of all test points at once, for performance reasons
-        x0 = np.repeat(self.xtest, self.M, axis=0)
-        
+        Parameters
+        ----------
+        X : np.array of shape [# startpoints, # simulations per startpoint, dimension]
+            data array containing endpoints of trajectory simulations for each startpoint
+        """
+
+        self.n_points = X.shape[0] # number of start points
+        self.M = X.shape[1] # number of simulations per startpoint
+        self.dim = X.shape[2]
+
+        #x0 = np.repeat(self.xtest, self.M, axis=0)
         #pointclouds is of shape (self.M * n_points ) x dimension
-        pointclouds = self.system.computeBurst(self.t, self.dt, x0, showprogress=True)
-        
-        #transform endpoints to feature approximation space    
+        #pointclouds = self.system.computeBurst(self.t, self.dt, x0, showprogress=True)
+
         if self.method == "rff":
-            self.sampler = RBFSampler(gamma = self.epsi, n_components=self.n_components,
+            self.sampler = RBFSampler(gamma = self.gamma, n_components=self.n_components,
                                       **self.kwargs)
         elif self.method == "nystroem":
             self.sampler = Nystroem(kernel=self.kernel, n_components=self.n_components,
@@ -263,29 +283,43 @@ class LinearRFFManifold(TransitionManifold):
         else:
             raise ValueError("Instantiate with either method='rff' or sampler='nystroem'")
 
-            
-        self.sampler.fit(pointclouds)
-        pointclouds = self.sampler.transform(pointclouds)
-                
         #compute approximation space mean embeddings
-        embedded = pointclouds.reshape(n_points, self.M, self.n_components).sum(axis=1) / self.M
-        
-        #centering
-        mean = embedded.sum(axis=0) / n_points
-        self.embedded = embedded - mean
+        self.embedded = self.sampler.fit_transform(X.reshape(self.n_points * self.M, self.dim))
+        self.embedded = self.embedded.reshape(self.n_points, self.M, self.n_components).sum(axis=1) #/ self.M
 
         #covariance matrix
+        mean = self.embedded.sum(axis=0) / self.n_points
+        self.embedded = self.embedded - mean
         cov = self.embedded.T @ self.embedded # n_components x n_components
         _, self.vec = eigsh(cov, k=1, which="LM")
 
-    def evaluate(self, data):
+    def predict(self, Y):
         """
-        Evaluates the computed eigenfunction on given data.
-        Note: computeRC has to be run first. 
+        Evaluates the computed eigenfunction on given test data Y.
+        Note: fit() has to be run first.
+
+        Parameters
+        ----------
+        Y : np.array of shape [# testpoints, dimension]
+            data array containing endpoints of trajectory simulations for each startpoint
         """
 
         if self.sampler is None:
-            raise RuntimeError("Run computeRC first to fit the model.")
+            raise RuntimeError("Run fit() first to fit the model.")
+        Y_embedded = self.sampler.transform(Y)
+        return Y_embedded @ self.vec
 
-        test_embedded = self.sampler.transform(data)
-        return test_embedded @ self.vec
+
+def _reshape(X):
+    """
+    Helper function providing reshape from three dimensional data format
+    [# startpoints, # simulations per startpoint, dimension]
+    to twodimensional data format
+    [# startpoints * # simulations per startpoint, dimension],
+    where the first dimension is dominant in # simulations per startpoint
+    """
+    n_startpoints = X.shape[0]
+    M = X.shape[1]
+    dim = X.shape[2]
+
+    return X.swapaxes(0,1).reshape(n_startpoints * M, dim)
