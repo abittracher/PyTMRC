@@ -270,10 +270,6 @@ class LinearRandomFeatureManifold(TransitionManifold):
         self.M = X.shape[1] # number of simulations per startpoint
         self.dim = X.shape[2]
 
-        #x0 = np.repeat(self.xtest, self.M, axis=0)
-        #pointclouds is of shape (self.M * n_points ) x dimension
-        #pointclouds = self.system.computeBurst(self.t, self.dt, x0, showprogress=True)
-
         if self.method == "rff":
             self.sampler = RBFSampler(gamma = self.gamma, n_components=self.n_components,
                                       **self.kwargs)
@@ -312,6 +308,13 @@ class LinearRandomFeatureManifold(TransitionManifold):
 
 def _reshape(X):
     """
+    This is a temporary auxiliary function to
+    bridge the transfer from old twodimensional data interface
+    to threedimensional interface.
+    It is used to run the old computational routines
+    with the new interfaces before updating the computational
+    routines for the new interface directly.
+
     Helper function providing reshape from three dimensional data format
     [# startpoints, # simulations per startpoint, dimension]
     to twodimensional data format
