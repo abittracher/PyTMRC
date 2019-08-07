@@ -6,6 +6,7 @@ Transition Manifold-related classes and methods
 
 # numerics imports
 import numpy as np
+import scipy
 from scipy.spatial import cKDTree
 from scipy.sparse.linalg import eigsh
 from scipy.ndimage.interpolation import shift
@@ -44,8 +45,9 @@ class KernelBurstTransitionManifold(TransitionManifold):
 
     def fit(self, X, showprogress = True):
         super().fit(X)
-        npoints, self.M = X.shape[:2]
+        
         #TODO update computational routine to new interface
+        npoints, self.M = X.shape[:2]
         X = _reshape(X)
 
         # compute symmetric kernel evaluations
@@ -76,7 +78,7 @@ class KernelBurstTransitionManifold(TransitionManifold):
 
 
 
-
+# TODO update to new interface 
 # TM based on RKHS-embeddings of a single long trajectory
 class KernelTrajTransitionManifold(TransitionManifold):
 
@@ -130,34 +132,35 @@ class KernelTrajTransitionManifold(TransitionManifold):
 # TM based on random Whitney embeddings of parallel short simulations
 class EmbeddingBurstTransitionManifold(TransitionManifold):
 
-    def __init__(self, system, embfun, xtest, t, dt, M, epsi=1.):
-        self.system = system
+    def __init__(self, embfun, epsi=1.):
+        super().__init__()
         self.embfun = embfun
-        self.xtest = xtest
-        self.t = t
-        self.dt = dt
-        self.M = M
         self.epsi = epsi
 
-    def computeRC(self, showprogress=True):
-        npoints = np.size(self.xtest,0)
+    def fit(self, X, showprogress=True):
+        super().fit(X)
 
-        # compute the time evolution of all test points at once, for performance reasons
-        x0 = np.tile(self.xtest, (self.M,1))
-        pointclouds = self.system.computeBurst(self.t, self.dt, x0, showprogress=showprogress)
+        #TODO update computational routine to new interface
+        npoints, self.M = X.shape[:2]
+        X = _reshape(X)
 
         # embedd each point cloud into R^k
         embpointclouds = np.zeros((0,(self.embfun).outputdimension))
         print("Evaluating observables...")
         for i in tqdm(range(npoints), disable = not showprogress):
-            y = self.embfun.evaluate(pointclouds[i::npoints,:])
+            y = self.embfun.evaluate(X[i::npoints,:])
             embpointclouds = np.append(embpointclouds, [np.sum(y,0)/self.M], axis=0)
         self.embpointclouds = embpointclouds
 
         # compute diffusion maps coordinates on embedded points
-        eigs = ml.diffusionMaps(embpointclouds, epsi=self.epsi)
+        distMat = scipy.spatial.distance.cdist(embpointclouds, embpointclouds)
+        eigs = ml.diffusionMaps(distMat, epsi=self.epsi)
         self.rc= eigs
 
+    def predict(self, Y):
+        super().predict(Y)
+        #TODO implement prediction
+        pass
 
 
 # random linear embedding function for the Whitney embedding
