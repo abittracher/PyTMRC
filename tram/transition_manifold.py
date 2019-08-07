@@ -23,22 +23,29 @@ import tram.manifold_learning as ml
 
 class TransitionManifold:
 
-    rc = None
+    def __init__(self):
+        self._fitted = False
 
-    def __init__(self, system, xtest):
-        self.system = system
-        self.xtest = xtest
+    def fit(self, X):
+        self._fitted = True
+
+    def predict(self, Y):
+        if not self._fitted:
+            raise ValueError("Run fit() method first before predicting")
 
 
 # TM based on RKHS-embeddings of parallel short simulations
 class KernelBurstTransitionManifold(TransitionManifold):
 
     def __init__(self, kernel, epsi=1.):
+        super().__init__()
         self.kernel = kernel
         self.epsi = epsi
 
     def fit(self, X, showprogress = True):
+        super().fit(X)
         npoints, self.M = X.shape[:2]
+        #TODO update computational routine to new interface
         X = _reshape(X)
 
         # compute symmetric kernel evaluations
@@ -63,7 +70,8 @@ class KernelBurstTransitionManifold(TransitionManifold):
         self.distMat = distMat
 
     def predict(self, Y):
-        #TODO
+        super().predict(Y)
+        #TODO implement prediction
         pass
 
 
@@ -198,6 +206,7 @@ class L2BurstTransitionManifold(TransitionManifold):
 
     def fit(self, X, showprogress=True):
         npoints = np.size(X,0)
+        #TODO update computational routine to new interface
         X = _reshape(X)
 
         # compute distance matrix
