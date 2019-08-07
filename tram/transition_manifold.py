@@ -33,27 +33,19 @@ class TransitionManifold:
 # TM based on RKHS-embeddings of parallel short simulations
 class KernelBurstTransitionManifold(TransitionManifold):
 
-    def __init__(self, system, kernel, xtest, t, dt, M,  epsi=1.):
-        self.system = system
+    def __init__(self, kernel, epsi=1.):
         self.kernel = kernel
-        self.xtest = xtest
-        self.t = t
-        self.dt = dt
-        self.M = M
         self.epsi = epsi
 
-    def computeRC(self, showprogress = True):
-        npoints = np.size(self.xtest,0)
-
-        # compute the time evolution of all test points at once, for performance reasons
-        x0 = np.tile(self.xtest, (self.M,1))
-        pointclouds = self.system.computeBurst(self.t, self.dt, x0, showprogress=showprogress)
+    def fit(self, X, showprogress = True):
+        npoints, self.M = X.shape[:2]
+        X = _reshape(X)
 
         # compute symmetric kernel evaluations
         dXX = []
         print("Computing symmetric kernel evaluations...")
         for i in tqdm(range(npoints), disable = not showprogress):
-            GXX = self.kernel.evaluate(pointclouds[i::npoints,:], pointclouds[i::npoints,:])
+            GXX = self.kernel.evaluate(X[i::npoints,:], X[i::npoints,:])
             dXX = np.append(dXX, np.sum(GXX))
 
         # compute asymmetric kernel evaluations and assemble distance matrix
@@ -61,14 +53,18 @@ class KernelBurstTransitionManifold(TransitionManifold):
         print("Computing asymmetric kernel evaluations...")
         for i in tqdm(range(npoints), disable = not showprogress):
             for j in range(i):
-                GXY = self.kernel.evaluate(pointclouds[i::npoints,:], pointclouds[j::npoints,:])
+                GXY = self.kernel.evaluate(X[i::npoints,:], X[j::npoints,:])
                 distMat[i,j] = (dXX[i] + dXX[j] - 2*np.sum(GXY)) / self.M**2
         distMat = distMat + np.transpose(distMat)
 
         # compute diffusion maps coordinates
-        eigs = ml.diffusionMaps(self.xtest, distMat, epsi=self.epsi)
+        eigs = ml.diffusionMaps(distMat, epsi=self.epsi)
         self.rc = eigs
         self.distMat = distMat
+
+    def predict(self, Y):
+        #TODO
+        pass
 
 
 
@@ -95,7 +91,7 @@ class KernelTrajTransitionManifold(TransitionManifold):
         # extract point clouds from trajectory
         pointclouds = []
         print("Assigning trajectory points to centers...")
-        for i in progressbar(range(npoints)):
+        for i in tqdm(range(npoints)):
             laggedInd = shift(closest==i, self.lag, cval=False) # indices of lagged points
             pointclouds.append(self.traj[laggedInd,:])
 
@@ -180,14 +176,10 @@ class RandomLinearEmbeddingFunction():
 # TM based on direct L2-distance comparison between densities represented by parallel shor simulations
 class L2BurstTransitionManifold(TransitionManifold):
 
-    def __init__(self, system, rho, xtest, t, dt, M, epsi=1., kde_epsi=0.1):
-        self.system = system
+    def __init__(self, rho, domain, epsi=1., kde_epsi=0.1):
         self.rho = rho
-        self.xtest = xtest
-        self.t = t
-        self.dt = dt
-        self.M = M
         self.epsi = epsi
+        self.domain = domain
         self.kde_epsi = kde_epsi
 
     def L2distance(self, cloud1, cloud2):
@@ -201,22 +193,19 @@ class L2BurstTransitionManifold(TransitionManifold):
 
         integrand = lambda x, y: (kde1fun(x,y) - kde2fun(x,y))**2 / self.rho(x,y)
 
-        dist = dblquad(integrand, self.system.domain[0,0], self.system.domain[1,0], self.system.domain[0,1], self.system.domain[1,1])
+        dist = dblquad(integrand, self.domain[0,0], self.domain[1,0], self.domain[0,1], self.domain[1,1])
         return dist
 
-    def computeRC(self, showprogress=True):
-        npoints = np.size(self.xtest,0)
-
-        # compute the time evolution of all test points at once, for performance reasons
-        x0 = np.tile(self.xtest, (self.M,1))
-        pointclouds = self.system.computeBurst(self.t, self.dt, x0, showprogress=True)
+    def fit(self, X, showprogress=True):
+        npoints = np.size(X,0)
+        X = _reshape(X)
 
         # compute distance matrix
         distMat = np.zeros((npoints, npoints))
         print("Computing distance matrix...")
         for i in tqdm(range(npoints), disable = not showprogress):
             for j in range(npoints):
-                distMat[i,j] = self.L2distance(pointclouds[i::npoints,:], pointclouds[j::npoints,:])[0]
+                distMat[i,j] = self.L2distance(X[i::npoints,:], X[j::npoints,:])[0]
         self.distMat = distMat
 
         # compute diffusion maps coordinates on embedded points
