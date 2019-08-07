@@ -32,7 +32,7 @@ class TransitionManifold:
 
     def predict(self, Y):
         if not self._fitted:
-            raise ValueError("Run fit() method first before predicting")
+            raise RuntimeError("Run fit() method first before predicting")
 
 
 # TM based on RKHS-embeddings of parallel short simulations
@@ -177,14 +177,13 @@ class RandomLinearEmbeddingFunction():
         #self.A,_ = np.linalg.qr(A,mode='complete')
         self.A = A
 
-
     def evaluate(self, x):
         y = x.dot(self.A)
         return y
 
 
 
-# TM based on direct L2-distance comparison between densities represented by parallel shor simulations
+# TM based on direct L2-distance comparison between densities represented by parallel short simulations
 class L2BurstTransitionManifold(TransitionManifold):
 
     def __init__(self, rho, domain, epsi=1., kde_epsi=0.1):
@@ -247,6 +246,7 @@ class LinearRandomFeatureManifold(TransitionManifold):
         n_components : int
             number of dimensions in the feature approximation space.
         """
+        super().__init__()
         self.method = method
         self.gamma = gamma
         self.kernel = kernel
@@ -266,6 +266,7 @@ class LinearRandomFeatureManifold(TransitionManifold):
         X : np.array of shape [# startpoints, # simulations per startpoint, dimension]
             data array containing endpoints of trajectory simulations for each startpoint
         """
+        super.fit(X)
 
         self.n_points = X.shape[0] # number of start points
         self.M = X.shape[1] # number of simulations per startpoint
@@ -300,9 +301,8 @@ class LinearRandomFeatureManifold(TransitionManifold):
         Y : np.array of shape [# testpoints, dimension]
             data array containing endpoints of trajectory simulations for each startpoint
         """
+        super().predict(Y)
 
-        if self.sampler is None:
-            raise RuntimeError("Run fit() first to fit the model.")
         Y_embedded = self.sampler.transform(Y)
         return Y_embedded @ self.vec
 
