@@ -12,13 +12,9 @@ from sklearn.neighbors.kde import KernelDensity
 from scipy.integrate import dblquad
 
 
-def diffusionMaps(xtest, distMat=None, neigs=10, epsi=1., alpha=0.5):
-    npoints = np.size(xtest,0)
+def diffusionMaps(distMat, neigs=10, epsi=1., alpha=0.5):
     
-    # compute the distance matrix if it does not exist
-    if distMat is None:
-        distMat = scipy.spatial.distance.cdist(xtest,xtest)
-        
+    npoints = distMat.shape[0]        
     kernelMat = np.exp(-distMat**2/epsi)
     rowsum  = np.sum(kernelMat,axis=0)
     
@@ -31,6 +27,7 @@ def diffusionMaps(xtest, distMat=None, neigs=10, epsi=1., alpha=0.5):
     # weight matrix
     weightMat = np.diag(sum(kernelMat,0))
     
+    #TODO optimize eigenvalue calculation -> eigsh
     # solve the diffusion maps eigenproblem
     eigs = sla.eigs(kernelMat, neigs, weightMat)
     return eigs
