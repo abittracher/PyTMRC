@@ -20,7 +20,7 @@ import matplotlib as mpl
 from matplotlib import cm
 
 # TM imports
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+sys.path.insert(0,'../..')
 import tram.system as system
 import tram.kernels as krnls
 import tram.transition_manifold as tm
@@ -36,6 +36,10 @@ system = system.DriftDiffusionSystem(driftdiffusion, domain)
 nTestpoints = 32
 xtest = system.generateTestpoints(nTestpoints, 'grid')
 
+def generateData():
+    X = system.generatePointclouds(1, 0.01, xtest, 0, 100)
+    return X
+
 
 #######################################
 #
@@ -44,14 +48,22 @@ xtest = system.generateTestpoints(nTestpoints, 'grid')
 #######################################
 
 # compute Reaction coordinate using the Kernel Embedding of the Transition Manifold
-def computeKernelRC():
+def computeKernelRC(X):
     # choose the embedding kernel
     kernel = krnls.GaussianKernel(1)
 
     # computation of the reaction corodinate
-    kerTM = tm.KernelBurstTransitionManifold(system, kernel, xtest, 1, 0.001, 100, 1)
-    kerTM.computeRC()
+    kerTM = tm.KernelBurstTransitionManifold(kernel, 1)
+    kerTM.fit(X)
     return kerTM
+
+def computeFourierRC(X):
+    # choose the embedding kernel
+
+    # computation of the reaction coordinate
+    fourierTM = tm.LinearRandomFeatureManifold()
+    fourierTM.fit(X)
+    return fourierTM
 
 
 # Visualize the reaction coordinate
@@ -153,17 +165,22 @@ def visualizePointclouds():
 
 def main():
 
-    visualizePointclouds()
+    print("This demo computes and compares the reaction coordinates of the full kernel embedding and the random Fourier features for a system with explicit timescale separation.")
+    input("Press Enter to continue...")
+    #visualizeTrajectory()
+    #visualizePointclouds()
     
+    X = generateData()
 
-    #print("Computing Reaction coordinate using the Kernel Transition Manifold method")
-    #kerTM=computeKernelRC()
-    #visualizeKernelRC(kerTM)
 
-    #print("Computing Reaction coordinate using the Whitney Embedding Transition Manifold method")
-    #embTM=computeEmbeddingRC()
-    #visualizeEmbeddingRC(embTM)
+    # print("\nNow computing Reaction coordinate using the full Kernel method..")
+    # kerTM=computeKernelRC(X)
+    # visualizeKernelRC(kerTM)
+    # input("Press Enter to continue...")
 
+    print("\nNow Computing Reaction coordinate using the random Fourier approximation method...")
+    fourierTM=computeFourierRC(X)
+    visualizeKernelRC(fourierTM)
 
 if __name__== "__main__":
     main()
