@@ -266,7 +266,7 @@ class LinearRandomFeatureManifold(TransitionManifold):
         X : np.array of shape [# startpoints, # simulations per startpoint, dimension]
             data array containing endpoints of trajectory simulations for each startpoint
         """
-        super.fit(X)
+        super().fit(X)
 
         self.n_points = X.shape[0] # number of start points
         self.M = X.shape[1] # number of simulations per startpoint
