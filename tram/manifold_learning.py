@@ -32,6 +32,34 @@ def diffusionMaps(distMat, neigs=10, epsi=1., alpha=0.5):
     eigs = sla.eigs(kernelMat, neigs, weightMat)
     return eigs
 
+def evaluateDiffusionMaps(eigs, n_components):
+    """
+    Transform data to diffusion map space
+    
+    Parameters
+    ----------
+    eigs: tuple of (eigenvalues, eigenvectors)  
+        of the diffusion maps eigenproblem as returned
+        by diffusionMaps(), where
+        eigenvalues is an array of shape (n_features,)
+        and eigenvectors is an array of shape
+        (n_features, n_eigenvectors)
+    n_components: int, number of dimensions
+        retained by dimensionality reduction
+        NOTE: n_components must be smaller or equal to
+        n_eigenvectors
+   
+    Returns
+    -------
+    array of shape (n_features, n_components)
+        the transformed data in diffusion space  
+    """
+    
+    #cut off redundant dimensions
+    eigs[0] = eigs[:n_components] 
+    eigs[1] = eigs[1][:, :n_components]
+
+    return eigs[1] * eigs[0].real[np.newaxis, :]
 
 
 def L2distance(system, cloud1, cloud2, rho, epsi):
