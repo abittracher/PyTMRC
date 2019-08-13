@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+# system imports
+import sys
+
 # numerics imports
 import math
 import numpy as np
 
 # utility imports
 from tqdm import tqdm
+import time
 
 class System:
     """
@@ -160,7 +164,10 @@ class GradientSystem(System):
         mean = np.zeros(sysdim)
         var = (dt*2/self.beta)*np.eye(sysdim)
 
-        if showprogress: print("Generating trajectory...")
+        if showprogress: 
+            print("Generating trajectory...")
+            sys.stdout.flush() # workaround for messed-up progress bars
+            
         for i in tqdm(range(nsteps), disable=not showprogress):
             nablaV = self.gradPot(rnew)
 
@@ -207,7 +214,10 @@ class GradientSystem(System):
         # pre-draw the Brownian motion
         #dW = np.random.multivariate_normal(mean, var, nsteps*npoints).reshape((npoints,sysdim,-1))
         
-        if showprogress: print("Burst integration...")
+        if showprogress: 
+            print("Burst integration...")
+            sys.stdout.flush() # workaround for messed-up progress bars
+
         for i in tqdm(range(nsteps), disable = not showprogress):
             nablaV = self.gradPot(r0)
 
@@ -247,7 +257,10 @@ class GradientSystem(System):
         npoints = np.size(r0, 0)
         r1 = np.zeros((npoints, M, self.dimension))
 
-        if showprogress: print("Generating poinclouds...")
+        if showprogress: 
+            tqdm.write("Generating poinclouds...")
+            sys.stdout.flush() # workaround for messed-up progress bars
+
         for k in tqdm(range(npoints)):
             r0M = np.tile(r0[k],(M,1))
             r1M = self.generateBurst(t, dt, r0M, showprogress=False)
@@ -342,7 +355,10 @@ class DriftDiffusionSystem(System):
         mean = np.zeros(sysdim)
         var = dt*np.eye(sysdim)
 
-        if showprogress: print("Generating trajectory...")
+        if showprogress: 
+            print("Generating trajectory...")
+            sys.stdout.flush() # workaround for messed-up progress bars
+
         for i in tqdm(range(nsteps), disable=not showprogress):
         
             b = self.drift(tnew, rnew) # evaluate drift
@@ -394,7 +410,10 @@ class DriftDiffusionSystem(System):
         mean = np.zeros(sysdim)
         var = dt*np.eye(sysdim)
         
-        if showprogress: print("Burst integration...")
+        if showprogress: 
+            print("Burst integration...")
+            sys.stdout.flush() # workaround for messed-up progress bars
+
         for i in tqdm(range(nsteps), disable = not showprogress):
             b = self.drift(t0, r0) # evaluate drift
             sigma = self.diffusion(t0, r0) # evaluate diffusion
@@ -438,7 +457,10 @@ class DriftDiffusionSystem(System):
         npoints = np.size(r0, 0)
         r1 = np.zeros((npoints, M, self.dimension))
 
-        if showprogress: print("Generating poinclouds...")
+        if showprogress: 
+            print("Generating poinclouds...")
+            sys.stdout.flush() # workaround for messed-up progress bars
+
         for k in tqdm(range(npoints)):
             r0M = np.tile(r0[k],(M,1))
             r1M = self.generateBurst(t, dt, r0M, t0, showprogress=False)

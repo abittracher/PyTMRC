@@ -4,6 +4,9 @@
 Transition Manifold-related classes and methods
 """
 
+# system imports
+import sys
+
 # numerics imports
 import numpy as np
 import scipy
@@ -53,6 +56,7 @@ class KernelBurstTransitionManifold(TransitionManifold):
         # compute symmetric kernel evaluations
         dXX = []
         print("Computing symmetric kernel evaluations...")
+        sys.stdout.flush() # workaround for messed-up progress bars
         for i in tqdm(range(npoints), disable = not showprogress):
             GXX = self.kernel.evaluate(X[i::npoints,:], X[i::npoints,:])
             dXX = np.append(dXX, np.sum(GXX))
@@ -60,6 +64,7 @@ class KernelBurstTransitionManifold(TransitionManifold):
         # compute asymmetric kernel evaluations and assemble distance matrix
         distMat = np.zeros((npoints, npoints))
         print("Computing asymmetric kernel evaluations...")
+        sys.stdout.flush() # workaround for messed-up progress bars
         for i in tqdm(range(npoints), disable = not showprogress):
             for j in range(i):
                 GXY = self.kernel.evaluate(X[i::npoints,:], X[j::npoints,:])
@@ -101,6 +106,7 @@ class KernelTrajTransitionManifold(TransitionManifold):
         # extract point clouds from trajectory
         pointclouds = []
         print("Assigning trajectory points to centers...")
+        sys.stdout.flush() # workaround for messed-up progress bars
         for i in tqdm(range(npoints)):
             laggedInd = shift(closest==i, self.lag, cval=False) # indices of lagged points
             pointclouds.append(self.traj[laggedInd,:])
@@ -108,6 +114,7 @@ class KernelTrajTransitionManifold(TransitionManifold):
         # compute symmetric kernel evaluations
         dXX = []
         print("Computing symmetric kernel evaluations...")
+        sys.stdout.flush() # workaround for messed-up progress bars
         for i in tqdm(range(npoints), disable = not showprogress):
             GXX = self.kernel.evaluate(pointclouds[i], pointclouds[i])
             dXX = np.append(dXX, np.sum(GXX))
@@ -115,6 +122,7 @@ class KernelTrajTransitionManifold(TransitionManifold):
         # compute asymmetric kernel evaluations and assemble distance matrix
         distMat = np.zeros((npoints, npoints))
         print("Computing asymmetric kernel evaluations...")
+        sys.stdout.flush() # workaround for messed-up progress bars
         for i in tqdm(range(npoints), disable = not showprogress):
             nTrajpointsi = np.size(pointclouds[i],0)
             for j in range(i):
@@ -147,6 +155,7 @@ class EmbeddingBurstTransitionManifold(TransitionManifold):
         # embedd each point cloud into R^k
         embpointclouds = np.zeros((0,(self.embfun).outputdimension))
         print("Evaluating observables...")
+        sys.stdout.flush() # workaround for messed-up progress bars
         for i in tqdm(range(npoints), disable = not showprogress):
             y = self.embfun.evaluate(X[i::npoints,:])
             embpointclouds = np.append(embpointclouds, [np.sum(y,0)/self.M], axis=0)
@@ -214,6 +223,7 @@ class L2BurstTransitionManifold(TransitionManifold):
         # compute distance matrix
         distMat = np.zeros((npoints, npoints))
         print("Computing distance matrix...")
+        sys.stdout.flush() # workaround for messed-up progress bars
         for i in tqdm(range(npoints), disable = not showprogress):
             for j in range(npoints):
                 distMat[i,j] = self.L2distance(X[i::npoints,:], X[j::npoints,:])[0]
@@ -266,7 +276,7 @@ class LinearRandomFeatureManifold(TransitionManifold):
         X : np.array of shape [# startpoints, # simulations per startpoint, dimension]
             data array containing endpoints of trajectory simulations for each startpoint
         """
-        super.fit(X)
+        super().fit(X)
 
         self.n_points = X.shape[0] # number of start points
         self.M = X.shape[1] # number of simulations per startpoint
