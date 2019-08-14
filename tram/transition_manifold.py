@@ -24,7 +24,7 @@ from tqdm import tqdm
 # TM imports
 import tram.manifold_learning as ml
 
-
+# base class
 class TransitionManifold:
 
     def __init__(self):
@@ -46,7 +46,7 @@ class KernelBurstTransitionManifold(TransitionManifold):
         self.kernel = kernel
         self.epsi = epsi
 
-    def fit(self, X, showprogress = True):
+    def fit(self, X, n_components=10, showprogress = True):
         super().fit(X)
         
         #TODO update computational routine to new interface
@@ -72,14 +72,42 @@ class KernelBurstTransitionManifold(TransitionManifold):
         distMat = distMat + np.transpose(distMat)
 
         # compute diffusion maps coordinates
-        eigs = ml.diffusionMaps(distMat, epsi=self.epsi)
+        eigs = ml.diffusionMaps(distMat, epsi=self.epsi, n_components=n_components)
         self.rc = eigs
         self.distMat = distMat
 
-    def predict(self, Y):
-        super().predict(Y)
-        #TODO implement prediction
-        pass
+    def predict(self, n_components):
+        """
+        Project data to diffusion space
+        
+        NOTE: the maximal possible dimension of the diffusion space is 
+            determined by the number of eigenpairs available specified 
+            by the argument <n_components> in the .fit() routine
+        NOTE: this method returns all dimensions in diffusion space including the 
+            dimension related to first eigenpair. When projecting to diffusion space,
+            it is therefore reasonable to not use the first coordinate 
+            returned by this method.
+        
+        Example
+        ----------
+        Projecting to a one-dimensional reaction coordinate
+            
+            >>> transformed = kerTM.predict(n_components=2)
+            >>> reaction_coordinate = transformed[:, 1]
+
+        Parameters
+        ----------
+        n_components: int, number of dimensions in
+            diffusion space
+
+        Returns
+        -------
+        array of shape (n_features, n_components)
+            the transformed data in diffusion space  
+        """
+        super().predict(None)
+        return ml.evaluateDiffusionMaps(self.rc, n_components)
+
 
 
 
