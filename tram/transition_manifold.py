@@ -193,11 +193,39 @@ class EmbeddingBurstTransitionManifold(TransitionManifold):
         distMat = scipy.spatial.distance.cdist(embpointclouds, embpointclouds)
         eigs = ml.diffusionMaps(distMat, epsi=self.epsi)
         self.rc= eigs
+    
+    def predict(self, n_components):
+        """
+        Project data to diffusion space
+        
+        NOTE: the maximal possible dimension of the diffusion space is 
+            determined by the number of eigenpairs available specified 
+            by the argument <n_components> in the .fit() routine
+        NOTE: this method returns all dimensions in diffusion space including the 
+            dimension related to first eigenpair. When projecting to diffusion space,
+            it is therefore reasonable to not use the first coordinate 
+            returned by this method.
+        
+        Example
+        ----------
+        Projecting to a one-dimensional reaction coordinate
+            
+            >>> transformed = embTM.predict(n_components=2)
+            >>> reaction_coordinate = transformed[:, 1]
 
-    def predict(self, Y):
-        super().predict(Y)
-        #TODO implement prediction
-        pass
+        Parameters
+        ----------
+        n_components: int, number of dimensions in
+            diffusion space
+
+        Returns
+        -------
+        array of shape (n_features, n_components)
+            the transformed data in diffusion space  
+        """
+        super().predict(None)
+        return ml.evaluateDiffusionMaps(self.rc, n_components)
+
 
 
 # random linear embedding function for the Whitney embedding
