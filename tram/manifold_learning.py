@@ -12,7 +12,7 @@ from sklearn.neighbors.kde import KernelDensity
 from scipy.integrate import dblquad
 
 
-#TODO rename epsi to gamma
+#TODO rename epsi to gamma, change in tram.transition_manifold accordingly
 def diffusionMaps(distMat, n_components=10, epsi=1., alpha=0.5):
     """
     Solve diffusion map eigenproblem
