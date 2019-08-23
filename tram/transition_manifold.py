@@ -4,6 +4,9 @@
 Transition Manifold-related classes and methods
 """
 
+#TODO: create base class for diffusion map based TMs,
+#unify fit/predict method
+
 # system imports
 import sys
 
@@ -17,16 +20,16 @@ from sklearn.neighbors.kde import KernelDensity
 from scipy.integrate import dblquad
 from sklearn.kernel_approximation import RBFSampler, Nystroem
 
-
 # utility imports
 from tqdm import tqdm
 
 # TM imports
 import tram.manifold_learning as ml
 
-# base class
 class TransitionManifold:
-
+    """
+    TransitionManifold base class
+    """
     def __init__(self):
         self._fitted = False
 
@@ -40,13 +43,58 @@ class TransitionManifold:
 
 # TM based on RKHS-embeddings of parallel short simulations
 class KernelBurstTransitionManifold(TransitionManifold):
+    """
+    Kernel transition manifold based on the kernel mean embeddings
+    of transition densities and maximum mean discrepancy.
+    The reaction coordinate is computed by diffusion maps
+    based on the embedded empirical approximations of the transition
+    densities.
+    This estimator is based on multiple iid simulations (bursts) of the dynamics
+    such that pointclouds can be used as empirical approximations
+    of transition densities corresponding to Dirac functions
+    in state space.
 
+    Please refer to 
+    A. Bittracher, S. Klus, B. Hamzi, C. Schütte
+    'A kernel-based method for coarse graining complex dynamical systems' 
+    https://arxiv.org/abs/1904.08622
+    """
+
+    #TODO rename epsi --> gamma
     def __init__(self, kernel, epsi=1.):
+        """
+        Instantiates a kernel transition manifold estimator.
+
+        Parameters
+        ----------
+        kernel : tram.kernels.Kernel object
+        epsi : float, bandwidth of the distance kernel used to assemble the
+            similarity matrix for diffusion maps.   
+            NOTE: This is NOT the bandwidth of the reproducing kernel used
+            for the RKHS embedding of the transition densities.
+
+        Example:
+        >>> kernel = tram.kernels.GaussianKernel()
+        >>> kernel_tm = KernelBurstTransitionManifold(kernel, epsi=1.)
+        """
         super().__init__()
         self.kernel = kernel
         self.epsi = epsi
 
     def fit(self, X, n_components=10, showprogress = True):
+        """
+        Computes the reaction coordinate based on the data X.
+
+        Parameters
+        ----------
+        X : np.array of shape [# startpoints, # simulations per startpoint, dimension]
+            data array containing endpoints of trajectory simulations for each startpoint
+        n_components : int, number of the eigenpairs of the diffusion matrix
+            which are computed.
+            NOTE: n_components needs to be at least as big as the dimension
+            of the desired reaction coordinate to which the data is projected by the
+            .predict() method.
+        """
         super().fit(X)
         
         #TODO update computational routine to new interface
@@ -167,13 +215,55 @@ class KernelTrajTransitionManifold(TransitionManifold):
 
 # TM based on random Whitney embeddings of parallel short simulations
 class EmbeddingBurstTransitionManifold(TransitionManifold):
+    """
+    Embedding transition manifold class based on the Whitney embedding
+    of transition densities and their euclidean distance in embedding space.
+    This estimator is based on multiple iid simulations (bursts) of the dynamics
+    such that pointclouds can be used as empirical approximations
+    of transition densities corresponding to Dirac functions
+    in state space.
 
+    Please refer to 
+    A. Bittracher, P. Koltai, S. Klus, R. Banisch, M. Dellnitz, C. Schütte
+    'Transition Manifolds of Complex Metastable Systems - 
+    Theory and Data-Driven Computation of Effective Dynamics'
+    J Nonlinear Sci (2018) 28:471–512
+    https://doi.org/10.1007/s00332-017-9415-0
+    """
+
+    #TODO rename epsi --> gamma
     def __init__(self, embfun, epsi=1.):
+        """
+        Instantiates a Whitney embedding transition manifold estimator.
+
+        Parameters
+        ----------
+        embfun : tram.transition_manifold.RandomLinearEmbeddingFunction object
+        epsi : float, bandwidth of the distance kernel used to assemble the
+            similarity matrix for diffusion maps.   
+
+        Example:
+        >>> embfun = tram.transition_manifold.RandomLinearEmbeddingFunction(2, 3, 0)
+        >>> emb_tm = EmbeddingBurstTransitionManifold(embfun, epsi=1.)
+        """
         super().__init__()
         self.embfun = embfun
         self.epsi = epsi
 
-    def fit(self, X, showprogress=True):
+    def fit(self, X, n_components=10, showprogress=True):
+        """
+        Computes the reaction coordinate based on the data X.
+
+        Parameters
+        ----------
+        X : np.array of shape [# startpoints, # simulations per startpoint, dimension]
+            data array containing endpoints of trajectory simulations for each startpoint
+        n_components : int, number of the eigenpairs of the diffusion matrix
+            which are computed.
+            NOTE: n_components needs to be at least as big as the dimension
+            of the desired reaction coordinate to which the data is projected by the
+            .predict() method.
+        """
         super().fit(X)
 
         #TODO update computational routine to new interface
@@ -191,7 +281,7 @@ class EmbeddingBurstTransitionManifold(TransitionManifold):
 
         # compute diffusion maps coordinates on embedded points
         distMat = scipy.spatial.distance.cdist(embpointclouds, embpointclouds)
-        eigs = ml.diffusionMaps(distMat, epsi=self.epsi)
+        eigs = ml.diffusionMaps(distMat, epsi=self.epsi, n_components=10)
         self.rc= eigs
     
     def predict(self, n_components):
@@ -296,6 +386,10 @@ class LinearRandomFeatureManifold(TransitionManifold):
     by using kernel feature Approximations. The kernel embeddings
     of the transition densities are approximated with
     either random Fourier features or the Nystroem method.
+    This estimator is based on multiple iid simulations (bursts) of the dynamics
+    such that pointclouds can be used as empirical approximations
+    of transition densities corresponding to Dirac functions
+    in state space.
 
     Please refer also to the documentation of sklearn.kernel_approximation
     """
