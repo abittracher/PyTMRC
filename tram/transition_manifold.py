@@ -314,12 +314,12 @@ class EmbeddingBurstTransitionManifold(TransitionManifold):
 
         Parameters
         ----------
-        embfun : tram.transition_manifold.RandomLinearEmbeddingFunction object
+        embfun : tram.embedding_functions.RandomLinearEmbeddingFunction object
         epsi : float, bandwidth of the distance kernel used to assemble the
             similarity matrix for diffusion maps.   
 
         Example:
-        >>> embfun = tram.transition_manifold.RandomLinearEmbeddingFunction(2, 3, 0)
+        >>> embfun = tram.embedding_functions.RandomLinearEmbeddingFunction(2, 3, 0)
         >>> emb_tm = EmbeddingBurstTransitionManifold(embfun, epsi=1.)
         """
         super().__init__()
@@ -418,7 +418,7 @@ class EmbeddingTrajTransitionManifold(TransitionManifold):
 
         Parameters
         ----------
-        embfun : tram.transition_manifold.RandomLinearEmbeddingFunction object
+        embfun : tram.embedding_functions.RandomLinearEmbeddingFunction object
         epsi : float, bandwidth of the distance kernel used to assemble the
             similarity matrix for diffusion maps.   
 
@@ -510,28 +510,6 @@ class EmbeddingTrajTransitionManifold(TransitionManifold):
         
         super().predict(None)
         return ml.evaluateDiffusionMaps(self.rc, n_components)
-
-
-
-
-# random linear embedding function for the Whitney embedding
-class RandomLinearEmbeddingFunction():
-
-    def __init__(self, inputdimension, outputdimension, seed):
-        self.inputdimension = inputdimension
-        self.outputdimension = outputdimension
-        self.seed = seed
-
-        # draw the random coefficients
-        np.random.seed(self.seed)
-        A = np.random.uniform(0, 1, (self.inputdimension,self.outputdimension))
-        #self.A,_ = np.linalg.qr(A,mode='complete')
-        self.A = A
-
-    def evaluate(self, x):
-        y = x.dot(self.A)
-        return y
-
 
 
 class LinearRandomFeatureManifold(TransitionManifold):
