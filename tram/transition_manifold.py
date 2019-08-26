@@ -173,6 +173,7 @@ class KernelTrajTransitionManifold(TransitionManifold):
     The method should thus be considered experimental.
     """
 
+    #TODO rename epsi --> gamma
     def __init__(self, kernel, epsi=1.):
         """
         Instantiates a kernel transition manifold estimator.
@@ -189,6 +190,7 @@ class KernelTrajTransitionManifold(TransitionManifold):
         >>> kernel = tram.kernels.GaussianKernel()
         >>> kernel_tm = KernelTrajTransitionManifold(kernel, epsi=1.)
         """
+        super().__init__()
         self.kernel = kernel
         self.epsi = epsi
 
@@ -391,6 +393,126 @@ class EmbeddingBurstTransitionManifold(TransitionManifold):
         return ml.evaluateDiffusionMaps(self.rc, n_components)
 
 
+# TM based on Whitney-embeddings of a single long trajectory
+class EmbeddingTrajTransitionManifold(TransitionManifold):
+    """
+    Embedding transition manifold based on the Whitney embedding of 
+    evolved indicator densities over Voronoi cells. If the diameters of
+    the cells are small, these densities approximate the transition 
+    densities starting from the cell center points.
+    This estimator is based on a single long trajectory and approximates
+    the Euclidean inner product between the embedded evolved indicator densities
+    by counting transitions between the Voronoi cells within the trajectory.
+
+    Please refer to 
+    A. Bittracher, R. Banisch, C. Schütte
+    'Data-driven computation of molecular reaction coordinates'
+    J Chem Phys 149, 154103 (2018)
+    https://doi.org/10.1063/1.5035183
+    """
+
+    #TODO rename epsi --> gamma
+    def __init__(self, embfun, epsi=1.):
+        """
+        Instantiates a Whitney embedding transition manifold estimator.
+
+        Parameters
+        ----------
+        embfun : tram.transition_manifold.RandomLinearEmbeddingFunction object
+        epsi : float, bandwidth of the distance kernel used to assemble the
+            similarity matrix for diffusion maps.   
+
+        Example:
+        >>> kernel = tram.kernels.GaussianKernel()
+        >>> emb_tm = EmbeddingTrajTransitionManifold(embfun, epsi=1.)
+        """
+        super().__init__()
+        self.embfun = embfun
+        self.epsi = epsi
+
+    def fit(self, X, Xtest, lag, n_components=10, showprogress = True):
+        """
+        Computes the reaction coordinate based on the trajectory data X.
+
+        Parameters
+        ----------
+        X : np.array of shape [# steps, dimension]
+            data array containing steps of a trajectory simulation
+        Xtest : np.array of shape [# points, dimension]
+            array containing center points of Voronoi cells
+        lag : int
+            number of steps after which the endpoints are selected
+        n_components : int, number of the eigenpairs of the diffusion matrix
+            which are computed.
+            NOTE: n_components needs to be at least as big as the dimension
+            of the desired reaction coordinate to which the data is projected by the
+            .predict() method.
+        """
+        super().fit(X)
+        
+        npoints = np.size(Xtest,0)
+        dim = np.size(Xtest,1)
+
+        # indices of test points closest to trajectory points
+        print("Sorting into Voronoi cells...")
+        kdTree = cKDTree(Xtest)
+        closest = kdTree.query(X, n_jobs=-1)[1]
+
+        # embedding trajectory points
+        Y = self.embfun.evaluate(X)
+        embdim = np.size(Y,1)
+
+        # extract and embedd point clouds
+        embpointclouds = np.zeros((npoints,embdim))
+        print("Embedding point clouds...")
+        sys.stdout.flush() # workaround for messed-up progress bars
+        for i in tqdm(range(npoints)):
+            laggedInd = shift(closest==i, lag, cval=False) # indices of lagged points
+            embpointclouds[i,:] = np.sum(Y[laggedInd,:], axis=0) / np.count_nonzero(laggedInd)
+        self.embpointclouds = embpointclouds
+
+        # compute diffusion maps coordinates on embedded points
+        distMat = scipy.spatial.distance.cdist(embpointclouds, embpointclouds)
+        eigs = ml.diffusionMaps(distMat, epsi=self.epsi, n_components=10)
+        self.rc= eigs
+
+
+    # TODO: implement evaluation at arbitrary points
+    def predict(self, n_components):
+        """
+        Project data to diffusion space
+        
+        NOTE: the maximal possible dimension of the diffusion space is 
+            determined by the number of eigenpairs available specified 
+            by the argument <n_components> in the .fit() routine
+        NOTE: this method returns all dimensions in diffusion space including the 
+            dimension related to first eigenpair. When projecting to diffusion space,
+            it is therefore reasonable to not use the first coordinate 
+            returned by this method.
+        emb
+        Example
+        ----------
+        Projecting to a one-dimensional reaction coordinate
+            
+            >>> transformed = kernel_tm.predict(n_components=2)
+            >>> reaction_coordinate = transformed[:, 1]
+
+        Parameters
+        ----------
+        n_components: int, number of dimensions in
+            diffusion space
+
+        Returns
+        -------
+        array of shape (n_features, n_components)
+            the transformed data in diffusion space  
+        """
+        
+        super().predict(None)
+        return ml.evaluateDiffusionMaps(self.rc, n_components)
+
+
+
 
 # random linear embedding function for the Whitney embedding
 class RandomLinearEmbeddingFunction():
@@ -410,48 +532,6 @@ class RandomLinearEmbeddingFunction():
         y = x.dot(self.A)
         return y
 
-
-
-# TM based on direct L2-distance comparison between densities represented by parallel short simulations
-class L2BurstTransitionManifold(TransitionManifold):
-
-    def __init__(self, rho, domain, epsi=1., kde_epsi=0.1):
-        self.rho = rho
-        self.epsi = epsi
-        self.domain = domain
-        self.kde_epsi = kde_epsi
-
-    def L2distance(self, cloud1, cloud2):
-        # 1/rho-weighted L2 distance between densities represented by point clouds
-
-        KDE1 = KernelDensity(kernel="gaussian", bandwidth=self.kde_epsi).fit(cloud1)
-        KDE2 = KernelDensity(kernel="gaussian", bandwidth=self.kde_epsi).fit(cloud2)
-
-        kde1fun = lambda x, y: np.exp(KDE1.score_samples(np.array([[x,y]])))
-        kde2fun = lambda x, y: np.exp(KDE2.score_samples(np.array([[x,y]])))
-
-        integrand = lambda x, y: (kde1fun(x,y) - kde2fun(x,y))**2 / self.rho(x,y)
-
-        dist = dblquad(integrand, self.domain[0,0], self.domain[1,0], self.domain[0,1], self.domain[1,1])
-        return dist
-
-    def fit(self, X, showprogress=True):
-        npoints = np.size(X,0)
-        #TODO update computational routine to new interface
-        X = _reshape(X)
-
-        # compute distance matrix
-        distMat = np.zeros((npoints, npoints))
-        print("Computing distance matrix...")
-        sys.stdout.flush() # workaround for messed-up progress bars
-        for i in tqdm(range(npoints), disable = not showprogress):
-            for j in range(npoints):
-                distMat[i,j] = self.L2distance(X[i::npoints,:], X[j::npoints,:])[0]
-        self.distMat = distMat
-
-        # compute diffusion maps coordinates on embedded points
-        #eigs = ml.diffusionMaps(embpointclouds, epsi=self.epsi)
-        #self.rc= eigs
 
 
 class LinearRandomFeatureManifold(TransitionManifold):
