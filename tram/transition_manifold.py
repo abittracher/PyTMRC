@@ -157,35 +157,75 @@ class KernelBurstTransitionManifold(TransitionManifold):
         return ml.evaluateDiffusionMaps(self.rc, n_components)
 
 
-
-
-# TODO update to new interface 
 # TM based on RKHS-embeddings of a single long trajectory
 class KernelTrajTransitionManifold(TransitionManifold):
+    """
+    Kernel transition manifold based on the kernel mean embeddings
+    of evolved indicator densities over Voronoi cells. If the diameters of
+    the cells are small, these densities approximate the transition 
+    densities starting from the cell center points.
+    This estimator is based on a single long trajectory and approximates
+    the evolved indicator densities by considering all trajectory points
+    within one Voronoi cell and treating the shifted points within the 
+    trajectory as endpoints of short simulations.
 
-    def __init__(self, system, kernel, xtest, traj, lag, epsi=1.):
-        self.system = system
+    Consistency analysis of this method is current work in progress.
+    The method should thus be considered experimental.
+    """
+
+    def __init__(self, kernel, epsi=1.):
+        """
+        Instantiates a kernel transition manifold estimator.
+
+        Parameters
+        ----------
+        kernel : tram.kernels.Kernel object
+        epsi : float, bandwidth of the distance kernel used to assemble the
+            similarity matrix for diffusion maps.   
+            NOTE: This is NOT the bandwidth of the reproducing kernel used
+            for the RKHS embedding of the transition densities.
+
+        Example:
+        >>> kernel = tram.kernels.GaussianKernel()
+        >>> kernel_tm = KernelTrajTransitionManifold(kernel, epsi=1.)
+        """
         self.kernel = kernel
-        self.xtest = xtest
-        self.traj = traj
-        self.lag = lag
         self.epsi = epsi
 
-    def computeRC(self, showprogress = True):
-        npoints = np.size(self.xtest,0)
+    def fit(self, X, Xtest, lag, n_components=10, showprogress = True):
+        """
+        Computes the reaction coordinate based on the trajectory data X.
+
+        Parameters
+        ----------
+        X : np.array of shape [# steps, dimension]
+            data array containing steps of a trajectory simulation
+        Xtest : np.array of shape [# points, dimension]
+            array containing center points of Voronoi cells
+        lag : int
+            number of steps after which the endpoints are selected
+        n_components : int, number of the eigenpairs of the diffusion matrix
+            which are computed.
+            NOTE: n_components needs to be at least as big as the dimension
+            of the desired reaction coordinate to which the data is projected by the
+            .predict() method.
+        """
+        super().fit(X)
+        
+        npoints = np.size(Xtest,0)
 
         # indices of test points closest to trajectory points
         print("Sorting into Voronoi cells...")
-        kdTree = cKDTree(self.xtest)
-        closest = kdTree.query(self.traj, n_jobs=-1)[1]
+        kdTree = cKDTree(Xtest)
+        closest = kdTree.query(X, n_jobs=-1)[1]
 
         # extract point clouds from trajectory
         pointclouds = []
         print("Assigning trajectory points to centers...")
         sys.stdout.flush() # workaround for messed-up progress bars
         for i in tqdm(range(npoints)):
-            laggedInd = shift(closest==i, self.lag, cval=False) # indices of lagged points
-            pointclouds.append(self.traj[laggedInd,:])
+            laggedInd = shift(closest==i, lag, cval=False) # indices of lagged points
+            pointclouds.append(X[laggedInd,:])
 
         # compute symmetric kernel evaluations
         dXX = []
@@ -209,7 +249,41 @@ class KernelTrajTransitionManifold(TransitionManifold):
 
         eigs = ml.diffusionMaps(distMat, epsi=self.epsi)
         self.rc = eigs
-        self.distMat = distMat
+        self.distMat = distMat 
+
+    # TODO: implement evaluation at arbitrary points
+    def predict(self, n_components):
+        """
+        Project data to diffusion space
+        
+        NOTE: the maximal possible dimension of the diffusion space is 
+            determined by the number of eigenpairs available specified 
+            by the argument <n_components> in the .fit() routine
+        NOTE: this method returns all dimensions in diffusion space including the 
+            dimension related to first eigenpair. When projecting to diffusion space,
+            it is therefore reasonable to not use the first coordinate 
+            returned by this method.
+        
+        Example
+        ----------
+        Projecting to a one-dimensional reaction coordinate
+            
+            >>> transformed = kernel_tm.predict(n_components=2)
+            >>> reaction_coordinate = transformed[:, 1]
+
+        Parameters
+        ----------
+        n_components: int, number of dimensions in
+            diffusion space
+
+        Returns
+        -------
+        array of shape (n_features, n_components)
+            the transformed data in diffusion space  
+        """
+        
+        super().predict(None)
+        return ml.evaluateDiffusionMaps(self.rc, n_components)
 
 
 
