@@ -21,7 +21,7 @@ from matplotlib import cm
 
 # TM imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
-import tram.gradient_system as gs
+import tram.system as gs
 import tram.kernels as krnls
 import tram.transition_manifold as tm
 import potential
@@ -155,17 +155,9 @@ def visualizeTrajectory():
 
 def main():
 
-    visualizePotential()
-#    visualizeTrajectory()
-    
-
-    print("Computing Reaction coordinate using the Kernel Transition Manifold method")
-    kerTM=computeKernelRC()
-    visualizeKernelRC(kerTM)
-
-    print("Computing Reaction coordinate using the Whitney Embedding Transition Manifold method")
-    embTM=computeEmbeddingRC()
-    visualizeEmbeddingRC(embTM)
+    r0 = system.generateTestpoints(40)
+    r1 = system.generatePointclouds(1, 0.001, r0, 20)
+    print(r1.shape)
 
 
 if __name__== "__main__":

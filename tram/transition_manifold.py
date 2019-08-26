@@ -131,7 +131,7 @@ class KernelTrajTransitionManifold(TransitionManifold):
                 distMat[i,j] = dXX[i]/nTrajpointsi**2 + dXX[j]/nTrajpointsj**2 - 2*np.sum(GXY)/(nTrajpointsi*nTrajpointsj)
         distMat = distMat + np.transpose(distMat)
 
-        eigs = ml.diffusionMaps(self.xtest, distMat, epsi=self.epsi)
+        eigs = ml.diffusionMaps(distMat, epsi=self.epsi)
         self.rc = eigs
         self.distMat = distMat
 
