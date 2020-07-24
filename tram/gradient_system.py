@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+"""
+Various kernels used for RKHS-embedding and Diffusion Maps algorithm
+"""
 
 # numerics imports
 import math

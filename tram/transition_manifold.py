@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Transition Manifold-related classes and methods
+Transition Manifold-related classes and methods.
 """
 
 #TODO: create base class for diffusion map based TMs,
@@ -314,7 +314,8 @@ class EmbeddingBurstTransitionManifold(TransitionManifold):
 
         Parameters
         ----------
-        embfun : tram.embedding_functions.RandomLinearEmbeddingFunction object
+        embfun : EmbeddingFunction, the embedding function for the Whitney
+            embedding
         epsi : float, bandwidth of the distance kernel used to assemble the
             similarity matrix for diffusion maps.   
 

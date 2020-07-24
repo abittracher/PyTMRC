@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Manifold learning methods
+Manifold learning methods for parametrizing the transition manifold.
 """
 
 # numerics imports
@@ -20,18 +20,24 @@ def diffusionMaps(distMat, n_components=10, epsi=1., alpha=0.5):
     Parameters
     ----------
     distMat: symmetric array of shape (n_features, n_features)
-
-    n_components: int, number of eigenvalues and 
+        distance matrix
+    n_components: int
+        number of eigenvalues and 
         eigenvectors to compute
         NOTE: n_components must be set at least
         to the number of desired dimensions in the
         diffusion space to which the data is projected
         by calling evaluateDiffusionMaps() later on
+    epsi: float
+        diffusion map kernel bandwidth parameter
+    alpha: float
+        diffusion map normalization parameter
    
     Returns
     -------
-    tuple of (eigenvalues, eigenvectors)  
-        of the diffusion maps eigenproblem
+    tuple of (eigenvalues, eigenvectors)
+        the first n_components eigenpairs of the diffusion 
+        maps eigenproblem as returned by diffusionMaps()
     """
     
     npoints = distMat.shape[0]        
@@ -60,12 +66,13 @@ def evaluateDiffusionMaps(eigs, n_components):
     Parameters
     ----------
     eigs: tuple of (eigenvalues, eigenvectors)  
-        of the diffusion maps eigenproblem as returned
-        by diffusionMaps(), where
+        eigenpairs of the diffusion maps eigenproblem as 
+        returned by diffusionMaps(), where
         eigenvalues is an array of shape (n_features,)
         and eigenvectors is an array of shape
         (n_features, n_eigenvectors)
-    n_components: int, number of dimensions in diffusion map space
+    n_components: int
+        number of dimensions in diffusion map space
         retained by dimensionality reduction
         NOTE: n_components must be smaller or equal to n_eigenvectors
    
@@ -80,7 +87,29 @@ def evaluateDiffusionMaps(eigs, n_components):
 
 
 def L2distance(system, cloud1, cloud2, rho, epsi):
-    # 1/rho-weighted L2 distance between densities represented by point clouds
+    """
+    Compute 1/rho-weighted L2 distance between two densities (given by finite 
+    samples) using Kernel density estimation. Currently implemented only for 
+    two-dimensional systems.
+    
+    Parameters
+    ----------
+    system: System object
+        required for boundaries of the state space
+    cloud1: np.array of shape [# points, system dimension]
+        contains samples from first density
+    cloud2: np.array of shape [# points, system dimension]
+        contains samples from second density
+    rho: function(double,double)
+        invariant density of the system
+    epsi: float
+        bandwidth parameter for the kernel density estimation
+   
+    Returns
+    -------
+    float
+        distance between the two densities 
+    """
     
     # Compute Kernel density estimate from point clouds
     KDE1 = KernelDensity(kernel="gaussian", bandwidth=epsi).fit(cloud1)

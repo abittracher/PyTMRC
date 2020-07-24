@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Various embedding functions used for Whitney embeddings
+Various embedding functions used for Whitney embeddings and TM visualization.
 """
 
 # numerics imports
@@ -69,10 +69,10 @@ class RandomLinearEmbeddingFunction(EmbeddingFunction):
         x : np.array of shape [# points, inputdimension]
         Array of evaluation points
 
-        Output
-        ------
-        y : np.array of shape [# points, outputdimension]
-        Array of image points
+        Returns
+        -------
+        np.array of shape [# points, outputdimension]
+            array of image points
         """
 
         y = x.dot(self.A)

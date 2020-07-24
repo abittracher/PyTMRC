@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+"""
+Provides classes for defining dynamical systems of various types, and methods
+for generating simulation data of these systems.
+"""
 
 # system imports
 import sys
@@ -57,7 +61,7 @@ class System:
         dist='uniform' : string
             method of distribution the points. Can be either 'uniform' or 'grid'
 
-        Output
+        Returns
         ------
         rsamp : np.array
             array containing the generated sampling points
@@ -146,7 +150,7 @@ class GradientSystem(System):
         showprogress=True : bool
             flag for progress bar
 
-        Output
+        Returns
         ------
         rout : np.array
             array containing the steps of the integration
@@ -195,7 +199,7 @@ class GradientSystem(System):
         showprogress=True : bool
             flag for progress bar
 
-        Output
+        Returns
         ------
         rout : np.array
             array containing the end points of the trajectories
@@ -248,7 +252,7 @@ class GradientSystem(System):
         showprogress=True : bool
             flag for progress bar
 
-        Output
+        Returns
         ------
         pointclouds : np.array
             3D array containing pointcloud data (npoints x M x dim-array)
@@ -332,7 +336,7 @@ class DriftDiffusionSystem(System):
         showprogress=True : bool
             flag for progress bar
 
-        Output
+        Returns
         ------
         rout : np.array
             array containing the steps of the integration
@@ -391,7 +395,7 @@ class DriftDiffusionSystem(System):
         showprogress=True : bool
             flag for progress bar
 
-        Output
+        Returns
         ------
         rout : np.array
             array containing the end points of the trajectories
@@ -448,7 +452,7 @@ class DriftDiffusionSystem(System):
         showprogress=True : bool
             flag for progress bar
 
-        Output
+        Returns
         ------
         pointclouds : np.array
             3D array containing pointcloud data (npoints x M x dim-array)
