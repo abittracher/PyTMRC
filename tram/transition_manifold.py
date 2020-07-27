@@ -154,7 +154,7 @@ class KernelBurstTransitionManifold(TransitionManifold):
             the transformed data in diffusion space  
         """
         super().predict(None)
-        return ml.evaluateDiffusionMaps(self.rc, n_components)
+        return ml.evaluateDiffusionMaps(self.rc, n_components+1)[:,1::]
 
 
 # TM based on RKHS-embeddings of a single long trajectory
@@ -285,7 +285,7 @@ class KernelTrajTransitionManifold(TransitionManifold):
         """
         
         super().predict(None)
-        return ml.evaluateDiffusionMaps(self.rc, n_components)
+        return ml.evaluateDiffusionMaps(self.rc, n_components+1)[:,1::]
 
 
 
@@ -326,6 +326,31 @@ class EmbeddingBurstTransitionManifold(TransitionManifold):
         super().__init__()
         self.embfun = embfun
         self.epsi = epsi
+        
+    def embedd(self, X, showprogress=True):
+        """
+        Embedds the point cloud data in X into Euclidean space via the objects
+        own EmbeddingFunction. Stores the resulting points in an array
+        self.embpointclouds.
+        
+        Parameters
+        ----------
+        X : np.array of shape [# startpoints, # simulations per startpoint, dimension]
+            data array containing endpoints of trajectory simulations for each startpoint
+        """
+        #TODO update computational routine to new interface
+        npoints, self.M = X.shape[:2]
+        X = _reshape(X)
+
+        # embedd each point cloud into R^k
+        embpointclouds = np.zeros((0,(self.embfun).outputdimension))
+        print("Evaluating observables...")
+        sys.stdout.flush() # workaround for messed-up progress bars
+        for i in tqdm(range(npoints), disable = not showprogress):
+            y = self.embfun.evaluate(X[i::npoints,:])
+            embpointclouds = np.append(embpointclouds, [np.sum(y,0)/self.M], axis=0)
+        self.embpointclouds = embpointclouds
+        
 
     def fit(self, X, n_components=10, showprogress=True):
         """
@@ -391,7 +416,7 @@ class EmbeddingBurstTransitionManifold(TransitionManifold):
             the transformed data in diffusion space  
         """
         super().predict(None)
-        return ml.evaluateDiffusionMaps(self.rc, n_components)
+        return ml.evaluateDiffusionMaps(self.rc, n_components+1)[:,1::]
 
 
 # TM based on Whitney-embeddings of a single long trajectory
@@ -510,7 +535,7 @@ class EmbeddingTrajTransitionManifold(TransitionManifold):
         """
         
         super().predict(None)
-        return ml.evaluateDiffusionMaps(self.rc, n_components)
+        return ml.evaluateDiffusionMaps(self.rc, n_components+1)[:,1::]
 
 
 class LinearRandomFeatureManifold(TransitionManifold):
