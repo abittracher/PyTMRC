@@ -24,7 +24,7 @@ from sklearn.kernel_approximation import RBFSampler, Nystroem
 from tqdm import tqdm
 
 # TM imports
-import tram.manifold_learning as ml
+import tmrc.manifold_learning as ml
 
 class TransitionManifold:
     """
@@ -67,14 +67,14 @@ class KernelBurstTransitionManifold(TransitionManifold):
 
         Parameters
         ----------
-        kernel : tram.kernels.Kernel object
+        kernel : tmrc.kernels.Kernel object
         epsi : float, bandwidth of the distance kernel used to assemble the
             similarity matrix for diffusion maps.   
             NOTE: This is NOT the bandwidth of the reproducing kernel used
             for the RKHS embedding of the transition densities.
 
         Example:
-        >>> kernel = tram.kernels.GaussianKernel()
+        >>> kernel = tmrc.kernels.GaussianKernel()
         >>> kernel_tm = KernelBurstTransitionManifold(kernel, epsi=1.)
         """
         super().__init__()
@@ -180,14 +180,14 @@ class KernelTrajTransitionManifold(TransitionManifold):
 
         Parameters
         ----------
-        kernel : tram.kernels.Kernel object
+        kernel : tmrc.kernels.Kernel object
         epsi : float, bandwidth of the distance kernel used to assemble the
             similarity matrix for diffusion maps.   
             NOTE: This is NOT the bandwidth of the reproducing kernel used
             for the RKHS embedding of the transition densities.
 
         Example:
-        >>> kernel = tram.kernels.GaussianKernel()
+        >>> kernel = tmrc.kernels.GaussianKernel()
         >>> kernel_tm = KernelTrajTransitionManifold(kernel, epsi=1.)
         """
         super().__init__()
@@ -320,7 +320,7 @@ class EmbeddingBurstTransitionManifold(TransitionManifold):
             similarity matrix for diffusion maps.   
 
         Example:
-        >>> embfun = tram.embedding_functions.RandomLinearEmbeddingFunction(2, 3, 0)
+        >>> embfun = tmrc.embedding_functions.RandomLinearEmbeddingFunction(2, 3, 0)
         >>> emb_tm = EmbeddingBurstTransitionManifold(embfun, epsi=1.)
         """
         super().__init__()
@@ -444,12 +444,12 @@ class EmbeddingTrajTransitionManifold(TransitionManifold):
 
         Parameters
         ----------
-        embfun : tram.embedding_functions.RandomLinearEmbeddingFunction object
+        embfun : tmrc.embedding_functions.RandomLinearEmbeddingFunction object
         epsi : float, bandwidth of the distance kernel used to assemble the
             similarity matrix for diffusion maps.   
 
         Example:
-        >>> kernel = tram.kernels.GaussianKernel()
+        >>> kernel = tmrc.kernels.GaussianKernel()
         >>> emb_tm = EmbeddingTrajTransitionManifold(embfun, epsi=1.)
         """
         super().__init__()
