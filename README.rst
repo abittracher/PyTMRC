@@ -4,7 +4,7 @@ PyTMRC
 What is PyTMRC?
 ===============
 
-PyTMRC is the **P**ython **T**ransition **M**anifold **R**eaction **C**oordinate package, a software package for computing reaction coordinates of stochastic dynamical systems based on the transition manifold data analysis framework. Its main application is the analysis of large atomistic models from molecular dynamics, but it can be applied to multi-scale processes from other areas of science as well.
+PyTMRC is the Python Transition Manifold Reaction Coordinate package, a software package for computing reaction coordinates of stochastic dynamical systems based on the transition manifold data analysis framework. Its main application is the analysis of large atomistic models from molecular dynamics, but it can be applied to multi-scale processes from other areas of science as well.
 
 The latest version of the software is available on `github <http://github.com/abittracher/pytmrc>`_. A build of the documentation can be found at Read the docs.
 
