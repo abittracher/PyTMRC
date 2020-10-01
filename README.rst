@@ -17,6 +17,16 @@ Features
 * easy to use, scikit learn-inspired interface
 * efficient numerics through NumPy backend
 
+Publications
+============
+
+The methods and mathematical framework implemented by PyTMRC are described in detail in the following publications:
+
+* Bittracher, Koltai, Klus, Banisch, Dellnitz, Schütte, “Transition Manifolds of Complex Metastable Systems: Theory and Data-Driven Computation of Effective Dynamics,” J. Nonlinear Sci. 28, no. 2 (2017): 471–512, https://doi.org/10.1007/s00332-017-9415-0.
+* Bittracher, Banisch, Schütte, “Data-Driven Computation of Molecular Reaction Coordinates,” The Journal of Chemical Physics 149, no. 15 (2018): 154103, https://doi.org/10.1063/1.5035183.
+* Bittracher, Klus, Hamzi, Koltai, Schütte, “Dimensionality Reduction of Complex Metastable Systems via Kernel Embeddings of Transition Manifolds,” To Appear in Journal of Nonlinear Science, 2019, https://arxiv.org/abs/1904.08622.
+
+
 Contributors
 ============
 
