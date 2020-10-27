@@ -54,3 +54,5 @@ html_theme = 'alabaster'
 html_static_path = ['_static']
 
 autosummary_generate=True
+
+autodoc_mock_imports = ['numpy', 'scipy', 'sklearn', 'tqdm']
